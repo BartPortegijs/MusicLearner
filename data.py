@@ -89,9 +89,6 @@ class Track():
     def get_title(self):
         return self['name'].partition(" - ")[0]
 
-    def get_dutch_market(self):
-        return 'NL' in self['available_markets']
-
     def __repr__(self):
         return f"{self.get_title()} - {self.get_artists()}"
 
