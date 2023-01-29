@@ -199,6 +199,7 @@ SELECT
 	*
 FROM song_learn;
 
+-- track_information source
 CREATE VIEW track_information AS
 WITH song_track AS
 	(SELECT
@@ -206,7 +207,7 @@ WITH song_track AS
 		song.title,
 		song.artists,
 		track.spotify_track_id,
-		ROW_NUMBER() OVER (PARTITION BY song.title, track.spotify_track_id
+		ROW_NUMBER() OVER (PARTITION BY song.id
 			ORDER BY track.spotify_track_id) AS nr_spotify_id
 	FROM song
 	LEFT JOIN track
@@ -218,10 +219,6 @@ SELECT
 	song_track.artists,
 	song_track.spotify_track_id
 FROM song_track
-LEFT JOIN song_artist
-	ON song_track.song_id = song_artist.song_id
-LEFT JOIN artist
-	ON song_artist.artist_id = artist.id
 WHERE song_track.nr_spotify_id = 1;
 
 CREATE VIEW history_information AS
@@ -271,9 +268,8 @@ SELECT
 FROM playlist D
 LEFT JOIN song_playlist A
     ON A.playlist_name = D.name
-LEFT JOIN track B
+LEFT JOIN track_information B
     ON A.song_id = B.song_id
-    AND B.active = 1
 LEFT JOIN song C
     ON A.song_id = C.id;
 

@@ -187,8 +187,6 @@ class DatabaseInformation:
                     WHERE track.spotify_track_id = :spotify_id
                     AND track.active=1"""
         for track in songset:
-            if track.song_id is not None:
-                continue
             filter_dict = {'spotify_id': track.spotify_id}
             result_temp = self.query_to_list_dict(query, filter_dict)
             try:
