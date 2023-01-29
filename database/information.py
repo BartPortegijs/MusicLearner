@@ -6,8 +6,11 @@ class DatabaseInformation:
     def __init__(self, cursor):
         self.cursor = cursor
 
-    def query_to_list_dict(self, select_query, filter_dict={}):
-        data = self.cursor.execute(select_query, filter_dict)
+    def query_to_list_dict(self, select_query, filter_dict: Union[list, dict] = None):
+        if filter_dict is None:
+            data = self.cursor.execute(select_query)
+        else:
+            data = self.cursor.execute(select_query, filter_dict)
         rows = self.cursor.fetchall()
         columns = [column[0] for column in data.description]
         return self._result_to_dict(columns, rows)
@@ -88,7 +91,8 @@ class DatabaseInformation:
             if id_song in track_dict:
                 track_dict[id_song].artist_tuple += (artist,)
             else:
-                track_dict[id_song] = Track(row['artists'], row['title'], (artist,), row['spotify_track_id'], None)
+                track_dict[id_song] = Track(artist=row['artists'], title=row['title'], artist_tuple=(artist,),
+                                            spotify_id=row['spotify_track_id'], song_id=row['song_id'])
 
         songset = SongSet(set(track_dict.values()))
         return songset
@@ -172,9 +176,15 @@ class DatabaseInformation:
                     FROM song
                     INNER JOIN track 
                     ON song.id = track.song_id
-                    WHERE track.spotify_track_id = :spotify_id"""
+                    WHERE track.spotify_track_id = :spotify_id
+                    AND track.active=1"""
         for track in songset:
+            if track.song_id is not None:
+                continue
             filter_dict = {'spotify_id': track.spotify_id}
             result_temp = self.query_to_list_dict(query, filter_dict)
-            song_ids.append((result_temp[0]['song_id'],))
+            try:
+                song_ids.append((result_temp[0]['song_id'],))
+            except IndexError:
+                raise Exception(f'Track {track} does not exist in database')
         return song_ids

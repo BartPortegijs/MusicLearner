@@ -237,4 +237,3 @@ class DatabaseInteraction:
         song_ids = self.db_inf.get_song_ids_from_songset(songset)
         update_script = """UPDATE song_state SET next_date = DATE('now') WHERE song_id= ?"""
         self.cursor.executemany(update_script, song_ids)
-

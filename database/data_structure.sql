@@ -216,9 +216,7 @@ SELECT
 	song_track.song_id,
 	song_track.title,
 	song_track.artists,
-	song_track.spotify_track_id,
-	artist.name,
-	artist.spotify_artist_id
+	song_track.spotify_track_id
 FROM song_track
 LEFT JOIN song_artist
 	ON song_track.song_id = song_artist.song_id

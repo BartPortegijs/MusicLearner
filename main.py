@@ -31,10 +31,12 @@ def main():
             repeat_songs_from_db(repeat_configs, **connection_classes)
             update_songs_in_db(update_configs, **connection_classes)
             conn.commit()
+            logging.info('Committed')
 
             db_int.insert_songs_in_playlist_db(update_configs)
             update_tracks_in_spotify(**connection_classes)
             conn.commit()
+            logging.info('Committed')
 
             # add_information_empty_song(db_inf, db_int, sp_inf)
             # conn.commit()
