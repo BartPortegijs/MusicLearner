@@ -1,11 +1,14 @@
 import os
 import sqlite3
+import logging
+from pathlib import Path
 
 from config import learning_states, playlist_configs
 from database.interaction import DatabaseInteraction
 
+
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
-sql_file = ROOT_DIR + '\\database\\data_structure.sql'
+sql_file = Path(ROOT_DIR)/'database'/'data_structure.sql'
 
 
 class DatabaseConnection:
@@ -17,11 +20,13 @@ class DatabaseConnection:
         self.db_int = DatabaseInteraction(self.curs, self.conn)
         if new_database:
             self._create_database_structure()
+            logging.info('New database structure created.')
 
     def _get_cursor_and_connect(self):
         conn = sqlite3.connect(self.db_file)
         curs = conn.cursor()
         curs.execute('PRAGMA foreign_keys = ON;')
+        logging.info(f'Connected to database {self.db_file}.')
         return curs, conn
 
     def __enter__(self):
@@ -30,6 +35,7 @@ class DatabaseConnection:
     def __exit__(self, exception_type, exception_value, traceback):
         self.conn.close()
         del (self.curs, self.conn)
+        logging.info('Closed database connection')
 
     def _create_database_structure(self):
         sql = open(sql_file)

@@ -275,6 +275,7 @@ LEFT JOIN song_playlist A
     ON A.playlist_name = D.name
 LEFT JOIN track B
     ON A.song_id = B.song_id
+    AND B.active = 1
 LEFT JOIN song C
     ON A.song_id = C.id;
 
@@ -290,6 +291,7 @@ SELECT
 FROM song_playlist_update A
 LEFT JOIN track B
     ON A.song_id = B.song_id
+    AND B.active = 1
 LEFT JOIN song C
     ON A.song_id = C.id
 LEFT JOIN playlist D

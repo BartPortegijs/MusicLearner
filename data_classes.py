@@ -13,6 +13,7 @@ class Track:
     spotify_id: str
     played_at: str = None
     context: str = None
+    song_id: int = None
 
     @property
     def title_artist(self):
@@ -137,11 +138,14 @@ class SongSet:
     def __contains__(self, track):
         return track in self.track_set
 
-    def __sub__(self, songset):
-        return SongSet(self.track_set - songset.track_set)
+    def __sub__(self, other: SongSet):
+        return SongSet(self.track_set - other.track_set)
 
-    def __eq__(self, songset):
-        return self.track_set == songset.track_set
+    def __eq__(self, other: SongSet):
+        return self.track_set == other.track_set
+
+    def intersection(self, other: SongSet):
+        return SongSet(self.track_set.intersection(other.track_set))
 
     def get_track_ids(self):
         return [track.spotify_id for track in self.track_set]
@@ -260,6 +264,9 @@ class PlaylistConfig:
         if self.remove is not None:
             assert self.introduction_state is None
 
+    def __repr__(self):
+        return f'Config for {self.name}'
+
     @property
     def filters(self):
         return self.get_rules_list('filter')
@@ -303,6 +310,14 @@ class PlaylistConfig:
     @property
     def name(self):
         return self.playlist.name
+
+    @property
+    def learn(self):
+        for rule in self.filters:
+            if rule.variable == 'activity':
+                if rule.value == 'learn':
+                    return True
+        return False
 
     def get_value(self, rule_type):
         rules_list = self.get_rules_list(rule_type)

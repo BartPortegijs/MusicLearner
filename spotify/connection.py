@@ -1,11 +1,11 @@
 import os.path
-
+import logging
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import configparser
 
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
-config_path = ROOT_DIR + '\\spotify\\configfile.ini'
+config_path = ROOT_DIR + '/spotify/configfile.ini'
 
 
 def connect_spotify_from_config() -> spotipy.client.Spotify:
@@ -16,11 +16,12 @@ def connect_spotify_from_config() -> spotipy.client.Spotify:
 def connect_spotify(client_id, secret_id, scope, uri) -> spotipy.client.Spotify:
     auth_manager = SpotifyOAuth(client_id=client_id, client_secret=secret_id, redirect_uri=uri,
                                 scope=scope, requests_session=True)
+    logging.info('Connected to Spotify')
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
 def read_config() -> dict:
-    assert os.path.exists(config_path), 'config_path does not exist'
+    assert os.path.exists(config_path), f'config_path {config_path} does not exist'
     config_obj = configparser.ConfigParser()
     config_obj.read(config_path)
     conn_dict = config_obj['connection']

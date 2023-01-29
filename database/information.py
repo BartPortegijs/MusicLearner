@@ -1,5 +1,5 @@
 from data_classes import *
-from dataclasses import asdict
+import logging
 
 
 class DatabaseInformation:
@@ -124,7 +124,10 @@ class DatabaseInformation:
         return PlaylistConfig(playlist=playlist, rules=config_rules)
 
     def get_number_track_to_add_to_playlist(self, playlist_configs):
-        number_dict = self.get_track_number_in_playlists()
+        configs_names = [config_name for config_name in playlist_configs.keys()]
+        number_dict = {k: v for k, v in self.get_track_number_in_playlists().items() if k in configs_names}
+
+        logging.info(f'Current numbers in playlists {number_dict}')
         numbers_to_add_dict = {}
         for playlist_config in playlist_configs.values():
             name = playlist_config.playlist.name
@@ -134,6 +137,7 @@ class DatabaseInformation:
                 numbers_to_add_dict[name] = max_number - songs_in_playlist
             else:
                 numbers_to_add_dict[name] = None
+        logging.info(f'Numbers to add in playlists {numbers_to_add_dict}')
         return numbers_to_add_dict
 
     def get_track_number_in_playlists(self):

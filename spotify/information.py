@@ -1,6 +1,6 @@
-from spotify.connection import connect_spotify_from_config
 from data_classes import *
 from util import first_timestamp_higher_bool
+import logging
 
 
 class Iterator:

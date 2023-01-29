@@ -1,4 +1,5 @@
 from dataclasses import asdict
+import logging
 
 from data_classes import *
 from database.information import DatabaseInformation
@@ -57,13 +58,14 @@ class DatabaseInteraction:
 
     def insert_song(self, track):
         data_dict = asdict(track)
-        select_query = "SELECT id FROM song WHERE title = :title AND artists = :artist LIMIT 1"
+        select_query = "SELECT id FROM song WHERE lower(title) = lower(:title) AND lower(artists) = lower(:artist) " \
+                       "LIMIT 1"
         insert_query = "INSERT INTO song(title, artists) VALUES(:title, :artist)"
         return self._insert_structure(select_query, insert_query, data_dict)
 
     def insert_track(self, song_id, spotify_track_id):
         data_dict = locals()
-        select_query = "SELECT id FROM track WHERE spotify_track_id = :spotify_track_id AND active = 1 LIMIT 1"
+        select_query = "SELECT id FROM track WHERE spotify_track_id = :spotify_track_id LIMIT 1"
         insert_query = """INSERT INTO track(song_id, spotify_track_id, active) 
                            VALUES(:song_id, :spotify_track_id, 1)"""
         return self._insert_structure(select_query, insert_query, data_dict)
@@ -107,12 +109,18 @@ class DatabaseInteraction:
     
     def insert_single_track(self, track, state_id, tag, next_date):
         song_id = self.insert_song(track)
+        if tag is not None:
+            self.insert_tag(song_id, tag)
+
+        if state_id == -1:
+            return
+
         self.insert_track(song_id, track.spotify_id)
 
         for artist in track.artist_tuple:
             artist_id = self.insert_artist(artist)
             self.insert_song_artist(song_id, artist_id)
-    
+
         current_state = self.db_inf.get_learning_state(state_id)
         if next_date is None:
             next_date = date_from_today(days=current_state.days_before_active)
@@ -135,11 +143,11 @@ class DatabaseInteraction:
         self.cursor.execute(update_query)
     
     ##############################################################
-    def insert_songs_in_playlist_db(self):
-        playlist_configs = self.db_inf.get_playlist_configs(only_filtered=True)
-        numbers_to_add_dict = self.db_inf.get_number_track_to_add_to_playlist(playlist_configs)
+    def insert_songs_in_playlist_db(self, update_configs: list[PlaylistConfig, ...]):
+        playlist_config_dict = {playlist_conf.playlist.name: playlist_conf for playlist_conf in update_configs}
+        numbers_to_add_dict = self.db_inf.get_number_track_to_add_to_playlist(playlist_config_dict)
 
-        for config in playlist_configs.values():
+        for config in playlist_config_dict.values():
             limit = numbers_to_add_dict[config.playlist.name]
             if limit is None or limit > 0:
                 query, insert_dict = config.create_filter_select_query(limit)
@@ -150,9 +158,10 @@ class DatabaseInteraction:
                 for row in result:
                     self.insert_song_playlist(**row)
                     self.cursor.execute(query, row)
+                    logging.info(f'Insert {row}')
 
     def remove_songset(self, songset):
-        update_script = "UPDATE track SET active = 0 WHERE spotify_track_id = ?"
+        update_script = "DELETE FROM track WHERE spotify_track_id = ?"
         remove_script = "DELETE FROM song_playlist WHERE song_id = ?"
         state_update_script = "UPDATE song_state SET song_in_playlist = 0 WHERE song_id = ?"
 
@@ -161,6 +170,21 @@ class DatabaseInteraction:
             self.cursor.execute(update_script, (spotify_id,))
 
         song_ids = self.db_inf.get_song_ids_from_songset(songset)
+
+        self.cursor.executemany(remove_script, song_ids)
+        self.cursor.executemany(state_update_script, song_ids)
+
+    def update_repeat_songset(self, songset):
+        song_ids = self.db_inf.get_song_ids_from_songset(songset)
+
+        remove_script = "DELETE FROM song_playlist WHERE song_id = ?"
+        state_update_script = f"""
+                                UPDATE song_state
+                                SET song_in_playlist = 0,
+                                    next_date = DATE('now', 'localtime', (MIN(7, days_before_active)  || ' day'))
+                                FROM learning_information
+                                WHERE song_state.song_id = ?
+                                    AND song_state.song_id = learning_information.song_id """
 
         self.cursor.executemany(remove_script, song_ids)
         self.cursor.executemany(state_update_script, song_ids)
@@ -194,21 +218,6 @@ class DatabaseInteraction:
 
         self.cursor.executemany(remove_script, song_ids_updatable)
         self.cursor.executemany(state_update_script, song_ids_updatable)
-
-    def update_repeat_songset(self, songset):
-        song_ids = self.db_inf.get_song_ids_from_songset(songset)
-
-        remove_script = "DELETE FROM song_playlist WHERE song_id = ?"
-        state_update_script = f"""
-                                UPDATE song_state
-                                SET song_in_playlist = 0,
-                                    next_date = DATE('now', 'localtime', (MIN(7, days_before_active)  || ' day'))
-                                FROM learning_information
-                                WHERE song_state.song_id = ?
-                                    AND song_state.song_id = learning_information.song_id """
-
-        self.cursor.executemany(remove_script, song_ids)
-        self.cursor.executemany(state_update_script, song_ids)
     
     ##############################################################
     # def delete_from_song_playlist(self, songset):
@@ -228,3 +237,4 @@ class DatabaseInteraction:
         song_ids = self.db_inf.get_song_ids_from_songset(songset)
         update_script = """UPDATE song_state SET next_date = DATE('now') WHERE song_id= ?"""
         self.cursor.executemany(update_script, song_ids)
+
