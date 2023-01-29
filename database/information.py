@@ -81,21 +81,29 @@ class DatabaseInformation:
         track_table_dict = self.query_to_list_dict(select_query, data_dict)
         return self._get_songset(track_table_dict)
 
-    @staticmethod
-    def _get_songset(track_information_table_dict):
-        track_dict = {}
-        for row in track_information_table_dict:
-            id_song = row['song_id']
-            artist = Artist(row['name'], row['spotify_artist_id'])
-
-            if id_song in track_dict:
-                track_dict[id_song].artist_tuple += (artist,)
-            else:
-                track_dict[id_song] = Track(artist=row['artists'], title=row['title'], artist_tuple=(artist,),
-                                            spotify_id=row['spotify_track_id'], song_id=row['song_id'])
-
-        songset = SongSet(set(track_dict.values()))
+    def _get_songset(self, track_information_table_dict):
+        songset = SongSet(set(self.get_track_from_row(row) for row in track_information_table_dict))
         return songset
+
+    artist_tuple = tuple[Artist, ...]
+
+    def get_track_from_row(self, row):
+        id_song = row['song_id']
+        artist = self.get_artists_from_song_id(id_song)
+        return Track(artist=row['artists'], title=row['title'], artist_tuple=artist,
+                     spotify_id=row['spotify_track_id'], song_id=id_song)
+
+    def get_artists_from_song_id(self, song_id) -> artist_tuple:
+        select_query = """SELECT
+                            *,
+                            name,
+                            spotify_artist_id
+                        FROM song_artist
+                        LEFT JOIN artist
+                            ON song_artist.artist_id = artist.id
+                        WHERE song_id= ?"""
+        result = self.query_to_list_dict(select_query, (song_id,))
+        return tuple(Artist(row['name'], row['spotify_artist_id']) for row in result)
 
     def get_playlists(self):
         playlist_dict = self.get_all_in_dict('playlist')
@@ -186,5 +194,5 @@ class DatabaseInformation:
             try:
                 song_ids.append((result_temp[0]['song_id'],))
             except IndexError:
-                raise Exception(f'Track {track} does not exist in database')
+                raise Exception(f'Track {track} does not exist in database. {result_temp}')
         return song_ids

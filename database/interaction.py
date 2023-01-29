@@ -165,11 +165,11 @@ class DatabaseInteraction:
         remove_script = "DELETE FROM song_playlist WHERE song_id = ?"
         state_update_script = "UPDATE song_state SET song_in_playlist = 0 WHERE song_id = ?"
 
+        song_ids = self.db_inf.get_song_ids_from_songset(songset)
+
         for track in songset:
             spotify_id = track.spotify_id
             self.cursor.execute(update_script, (spotify_id,))
-
-        song_ids = self.db_inf.get_song_ids_from_songset(songset)
 
         self.cursor.executemany(remove_script, song_ids)
         self.cursor.executemany(state_update_script, song_ids)

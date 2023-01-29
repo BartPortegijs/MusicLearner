@@ -150,7 +150,7 @@ class TestDatabaseInsertTrack(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.db_int.insert_single_track(cls.track, 0, 'test')
+        cls.db_int.insert_single_track(cls.track, 0, 'test', None)
         cls.db_conn.conn.commit()
 
     @classmethod
@@ -217,7 +217,8 @@ class TestDatabaseGetClass(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.db_int.insert_songset(cls.songset, 0, 'test')
-        cls.db_int.insert_songs_in_playlist_db()
+        configs = list(cls.db_inf.get_playlist_configs(only_filtered=True).values())
+        cls.db_int.insert_songs_in_playlist_db(configs)
         cls.db_conn.conn.commit()
         cls.maxDiff = None
 
@@ -299,6 +300,7 @@ class TestUpdates(unittest.TestCase):
     table_column_dict = {'learning_information': ('next_date', 'learning_id', 'song_in_playlist'),
                          'song_playlist_information': ('playlist_name',),
                          'song_playlist_update_information': ('playlist_name', 'action')}
+    configs = list(db_inf.get_playlist_configs(only_filtered=True).values())
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -362,7 +364,7 @@ class TestUpdates(unittest.TestCase):
                                  single_expect=single_update, multiple_expect=multiple_update)
 
     def test_a_InsertSongsInPlaylist(self):
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
         self.db_conn.conn.commit()
 
         single_learning = (util.date_from_today(0), 0, 1)
@@ -389,7 +391,7 @@ class TestUpdates(unittest.TestCase):
                                        rows_update=2, single_update=single_update)
 
         self.db_int.delete_from_song_playlist_update(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
 
         single_learning = (util.date_from_today(0), 2, 1)
         single_update = ('first_learn', 'insert')
@@ -412,7 +414,7 @@ class TestUpdates(unittest.TestCase):
                                        rows_update=0)
 
         self.db_int.delete_from_song_playlist_update(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
 
         self._three_test_update_format(single_learning=single_learning,
                                        rows_song_playlist=2, single_song_playlist=single_song_playlist,
@@ -433,14 +435,14 @@ class TestUpdates(unittest.TestCase):
                                        rows_update=2, single_update=single_update)
 
         self.db_int.delete_from_song_playlist_update(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
 
         self._three_test_update_format(single_learning=single_learning,
                                        rows_song_playlist=0,
                                        rows_update=0)
 
         self.db_int.change_next_date_to_today(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
         self.db_conn.conn.commit()
 
         single_learning = (util.date_from_today(0), 3, 1)
@@ -466,7 +468,7 @@ class TestUpdates(unittest.TestCase):
                                        rows_update=1, single_update=single_update)
 
         self.db_int.delete_from_song_playlist_update(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
 
         single_learning = (util.date_from_today(0), 2, 1)
         multiple_learning = (util.date_from_today(0), 3, 1)
@@ -494,14 +496,14 @@ class TestUpdates(unittest.TestCase):
                                        rows_update=1, multiple_update=multiple_update)
 
         self.db_int.delete_from_song_playlist_update(self.songset)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
 
         self._three_test_update_format(single_learning=single_learning, multiple_learning=multiple_learning,
                                        rows_song_playlist=1, single_song_playlist=single_song_playlist,
                                        rows_update=0)
 
         self.db_int.change_next_date_to_today(self.songset_multiple)
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
         self.db_conn.conn.commit()
 
         multiple_learning = (util.date_from_today(0), 1, 1)
@@ -536,7 +538,7 @@ class TestUpdates(unittest.TestCase):
                                        rows_song_playlist=0,
                                        rows_update=2, single_update=single_update, multiple_update=multiple_update)
 
-        self.db_int.insert_songs_in_playlist_db()
+        self.db_int.insert_songs_in_playlist_db(self.configs)
         self.db_conn.conn.commit()
 
     def test_j_get_update_set_for_spotify(self):
